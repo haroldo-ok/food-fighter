@@ -7,13 +7,14 @@
 #include "data.h"
 
 #define PLAYER_SPEED 2
-#define PLAYER_SHOT_SPEED (4 * 256)
+#define PLAYER_SHOT_SPEED 4
 #define PLAYER_TOP (16)
 #define PLAYER_LEFT (8)
 #define PLAYER_RIGHT (256 - 16)
 #define PLAYER_BOTTOM (SCREEN_H - 24)
 
 actor player;
+actor shot;
 
 void load_standard_palettes() {
 	SMS_loadBGPalette(sprites_palette_bin);
@@ -29,6 +30,21 @@ void handle_player_input() {
 	} else if (joy & PORT_A_KEY_RIGHT) {
 		if (player.x < PLAYER_RIGHT) player.x += PLAYER_SPEED;
 	}
+	
+	if (joy & (PORT_A_KEY_1 | PORT_A_KEY_2)) {
+		if (!shot.active) {
+			shot.x = player.x + 4;
+			shot.y = player.y;
+			shot.active = 1;
+		}
+	}
+}
+
+void handle_shot_movement() {
+	if (!shot.active) return;
+	
+	shot.y -= PLAYER_SHOT_SPEED;	
+	if (shot.y < -8) shot.active = 0;
 }
 
 void main() {
@@ -43,13 +59,18 @@ void main() {
 	SMS_displayOn();
 	
 	init_actor(&player, 120, PLAYER_BOTTOM, 2, 1, 2, 1);
+	init_actor(&shot, 120, PLAYER_BOTTOM - 8, 2, 1, 6, 1);
+	
+	shot.active = 0;
 
 	while (1) {
 		handle_player_input();
+		handle_shot_movement();
 		
 		SMS_initSprites();
 
 		draw_actor(&player);
+		draw_actor(&shot);
 		
 		SMS_finalizeSprites();
 		SMS_waitForVBlank();
