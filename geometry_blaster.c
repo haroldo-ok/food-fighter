@@ -52,6 +52,21 @@ void handle_shot_movement() {
 	if (shot.y < -8) shot.active = 0;
 }
 
+char is_colliding_with_shot(actor *act) {
+	static int delta;
+	
+	if (!shot.active) return 0;
+	if (!act->active) return 0;
+
+	delta = act->y - shot.y;
+	if (delta < -4 || delta > act->pixel_h + 12) return 0;	
+
+	delta = act->x - shot.x;
+	if (delta < -4 || delta > act->pixel_w + 12) return 0;
+	
+	return 1;
+}
+
 void init_enemies() {
 	static char i, j;
 	static int x, y;
@@ -88,6 +103,11 @@ void handle_enemies_movement() {
 		for (j = 0; j != MAX_ENEMIES_X; j++) {
 			enemy->x++;
 			if (enemy->x > 255) enemy->x -= 255;
+			
+			if (is_colliding_with_shot(enemy)) {
+				enemy->active = 0;
+				shot.active = 0;
+			}
 
 			enemy++;
 		}
