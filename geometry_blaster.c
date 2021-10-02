@@ -59,10 +59,10 @@ char is_colliding_with_shot(actor *act) {
 	if (!act->active) return 0;
 
 	delta = act->y - shot.y;
-	if (delta < -4 || delta > act->pixel_h + 12) return 0;	
+	if (delta < -6 || delta > act->pixel_h + 14) return 0;	
 
 	delta = act->x - shot.x;
-	if (delta < -4 || delta > act->pixel_w + 12) return 0;
+	if (delta < -6 || delta > act->pixel_w + 14) return 0;
 	
 	return 1;
 }
@@ -114,6 +114,21 @@ void handle_enemies_movement() {
 	}
 }
 
+char are_all_enemies_dead() {
+	static char i, j;
+	static actor *enemy;
+
+	for (i = 0; i != MAX_ENEMIES_Y; i++) {
+		enemy = enemies[i];
+		for (j = 0; j != MAX_ENEMIES_X; j++) {
+			if (enemy->active) return 0;
+			enemy++;
+		}
+	}
+	
+	return 1;
+}
+
 void main() {
 	SMS_useFirstHalfTilesforSprites(1);
 	SMS_setSpriteMode(SPRITEMODE_TALL);
@@ -133,6 +148,11 @@ void main() {
 	shot.active = 0;
 
 	while (1) {
+		if (are_all_enemies_dead()) {
+			init_enemies();	
+			shot.active = 0;
+		}
+		
 		handle_player_input();
 		handle_shot_movement();
 		handle_enemies_movement();
