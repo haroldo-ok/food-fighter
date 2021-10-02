@@ -15,11 +15,18 @@
 
 #define MAX_ENEMIES_X (3)
 #define MAX_ENEMIES_Y (3)
+#define MAX_ENEMY_SHOTS (2)
+#define ENEMY_SHOT_SPEED (3)
 
 actor player;
 actor shot;
 
 actor enemies[MAX_ENEMIES_Y][MAX_ENEMIES_X];
+actor enemy_shots[MAX_ENEMY_SHOTS];
+
+struct level {
+	char enemy_count;
+} level;
 
 void load_standard_palettes() {
 	SMS_loadBGPalette(sprites_palette_bin);
@@ -114,19 +121,39 @@ void handle_enemies_movement() {
 	}
 }
 
-char are_all_enemies_dead() {
-	static char i, j;
+char count_enemies() {
+	static char i, j, count;
 	static actor *enemy;
 
+	count = 0;
 	for (i = 0; i != MAX_ENEMIES_Y; i++) {
 		enemy = enemies[i];
 		for (j = 0; j != MAX_ENEMIES_X; j++) {
-			if (enemy->active) return 0;
+			if (enemy->active) count++;
 			enemy++;
 		}
 	}
 	
-	return 1;
+	return count;
+}
+
+void init_enemy_shots() {
+	static char i;
+	static actor *enm_shot;
+
+	for (i = 0, enm_shot = enemy_shots; i != MAX_ENEMY_SHOTS; i++, enm_shot++) {
+		init_actor(enm_shot, (i << 4) + 8, i << 4, 1, 1, 8, 1);
+		enm_shot->active = 0;
+	}
+}
+
+void draw_enemy_shots() {
+	static char i;
+	static actor *enm_shot;
+
+	for (i = 0, enm_shot = enemy_shots; i != MAX_ENEMY_SHOTS; i++, enm_shot++) {
+		draw_actor(enm_shot);
+	}
 }
 
 void main() {
@@ -141,15 +168,18 @@ void main() {
 	SMS_displayOn();
 	
 	init_actor(&player, 120, PLAYER_BOTTOM, 2, 1, 2, 1);
-	init_actor(&shot, 120, PLAYER_BOTTOM - 8, 2, 1, 6, 1);
+	init_actor(&shot, 120, PLAYER_BOTTOM - 8, 1, 1, 6, 1);
 
 	init_enemies();
-	
+	init_enemy_shots();	
+
 	shot.active = 0;
 
 	while (1) {
-		if (are_all_enemies_dead()) {
+		level.enemy_count = count_enemies();
+		if (!level.enemy_count) {
 			init_enemies();	
+			init_enemy_shots();
 			shot.active = 0;
 		}
 		
@@ -162,6 +192,7 @@ void main() {
 		draw_actor(&player);
 		draw_actor(&shot);
 		draw_enemies();
+		draw_enemy_shots();
 		
 		SMS_finalizeSprites();
 		SMS_waitForVBlank();
