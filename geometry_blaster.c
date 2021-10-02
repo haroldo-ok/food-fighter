@@ -137,6 +137,32 @@ char count_enemies() {
 	return count;
 }
 
+void fire_as_enemy_shot(actor *enm_shot) {
+	static char i, j, count, target;
+	static actor *enemy;
+	
+	if (!level.enemy_count) return;
+
+	count = 0;
+	target = rand() % level.enemy_count;
+	for (i = 0; i != MAX_ENEMIES_Y; i++) {
+		enemy = enemies[i];
+		for (j = 0; j != MAX_ENEMIES_X; j++) {
+			if (enemy->active) {
+				count++;
+				if (count == target) {
+					enm_shot->x = enemy->x + 4;
+					enm_shot->y = enemy->y + 12;
+					enm_shot->active = 1;
+					
+					return;
+				}
+			}
+			enemy++;
+		}
+	}
+}
+
 void init_enemy_shots() {
 	static char i;
 	static actor *enm_shot;
@@ -153,6 +179,20 @@ void draw_enemy_shots() {
 
 	for (i = 0, enm_shot = enemy_shots; i != MAX_ENEMY_SHOTS; i++, enm_shot++) {
 		draw_actor(enm_shot);
+	}
+}
+
+void handle_enemy_shots_movement() {
+	static char i;
+	static actor *enm_shot;
+
+	for (i = 0, enm_shot = enemy_shots; i != MAX_ENEMY_SHOTS; i++, enm_shot++) {
+		if (enm_shot->active) {
+			enm_shot->y += ENEMY_SHOT_SPEED;
+			if (enm_shot->y > SCREEN_H) enm_shot->active = 0;
+		} else {
+			if (rand() & 0xF) fire_as_enemy_shot(enm_shot);
+		}
 	}
 }
 
@@ -186,6 +226,7 @@ void main() {
 		handle_player_input();
 		handle_shot_movement();
 		handle_enemies_movement();
+		handle_enemy_shots_movement();
 		
 		SMS_initSprites();
 
