@@ -15,6 +15,7 @@
 
 actor player;
 actor shot;
+actor enemy;
 
 void load_standard_palettes() {
 	SMS_loadBGPalette(sprites_palette_bin);
@@ -60,6 +61,7 @@ void main() {
 	
 	init_actor(&player, 120, PLAYER_BOTTOM, 2, 1, 2, 1);
 	init_actor(&shot, 120, PLAYER_BOTTOM - 8, 2, 1, 6, 1);
+	init_actor(&enemy, 120, 32, 2, 1, 64, 6);
 	
 	shot.active = 0;
 
@@ -71,6 +73,7 @@ void main() {
 
 		draw_actor(&player);
 		draw_actor(&shot);
+		draw_actor(&enemy);
 		
 		SMS_finalizeSprites();
 		SMS_waitForVBlank();
