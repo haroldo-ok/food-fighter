@@ -25,7 +25,13 @@ actor enemies[MAX_ENEMIES_Y][MAX_ENEMIES_X];
 actor enemy_shots[MAX_ENEMY_SHOTS];
 
 struct level {
+	char number;
+	
 	char enemy_count;
+	char horizontal_spacing, horizontal_odd_spacing;
+	
+	fixed incr_x, incr_y;
+	fixed spd_x, spd_y;
 } level;
 
 void load_standard_palettes() {
@@ -83,7 +89,7 @@ void init_enemies() {
 
 	for (i = 0, y = 0; i != MAX_ENEMIES_Y; i++, y += 32) {
 		enemy = enemies[i];
-		for (j = 0, x = i & 1 ? (256/6) : 0; j != MAX_ENEMIES_X; j++, x += (256 / 3)) {
+		for (j = 0, x = i & 1 ? level.horizontal_odd_spacing : 0; j != MAX_ENEMIES_X; j++, x += level.horizontal_spacing) {
 			init_actor(enemy, x, i << 5, 2, 1, 64, 6);
 			enemy++;
 		}
@@ -106,23 +112,34 @@ void draw_enemies() {
 void handle_enemies_movement() {
 	static char i, j;
 	static actor *enemy;
+	
+	level.incr_x.w += level.spd_x.w;
+	level.incr_y.w += level.spd_y.w;
 
 	for (i = 0; i != MAX_ENEMIES_Y; i++) {
 		enemy = enemies[i];
 		for (j = 0; j != MAX_ENEMIES_X; j++) {
-			enemy->x++;
-			if (enemy->x > 255) enemy->x -= 255;
-			
-			if (is_colliding_with_shot(enemy)) {
-				enemy->active = 0;
-				shot.active = 0;
+			if (enemy->active) {
+				enemy->x += level.incr_x.b.h;
+				enemy->y += level.incr_y.b.h;
+				
+				if (enemy->x > 255) enemy->x -= 255;
+				if (enemy->y > SCREEN_H) enemy->y -= SCREEN_H;
+				
+				if (is_colliding_with_shot(enemy)) {
+					enemy->active = 0;
+					shot.active = 0;
 
-				PSGSFXPlay(enemy_death_psg, SFX_CHANNELS2AND3);
+					PSGSFXPlay(enemy_death_psg, SFX_CHANNELS2AND3);
+				}
 			}
 
 			enemy++;
 		}
 	}
+
+	level.incr_x.b.h = 0;
+	level.incr_y.b.h = 0;
 }
 
 char count_enemies() {
@@ -205,6 +222,20 @@ void interrupt_handler() {
 	PSGSFXFrame();
 }
 
+void init_level() {
+	level.incr_x.w = 0;
+	level.incr_y.w = 0;
+	level.spd_x.w = 192;
+	level.spd_y.w = 0;
+	
+	level.horizontal_spacing = 256 / 3;
+	level.horizontal_odd_spacing = 256 / 6;
+
+	init_enemies();
+	init_enemy_shots();		
+	shot.active = 0;
+}
+
 void main() {
 	SMS_useFirstHalfTilesforSprites(1);
 	SMS_setSpriteMode(SPRITEMODE_TALL);
@@ -223,17 +254,14 @@ void main() {
 	init_actor(&player, 120, PLAYER_BOTTOM, 2, 1, 2, 1);
 	init_actor(&shot, 120, PLAYER_BOTTOM - 8, 1, 1, 6, 1);
 
-	init_enemies();
-	init_enemy_shots();	
-
-	shot.active = 0;
+	level.number = 1;
+	init_level();
 
 	while (1) {
 		level.enemy_count = count_enemies();
 		if (!level.enemy_count) {
-			init_enemies();	
-			init_enemy_shots();
-			shot.active = 0;
+			level.number++;
+			init_level();
 		}
 		
 		handle_player_input();
