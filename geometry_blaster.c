@@ -18,13 +18,14 @@
 #define MAX_ENEMY_SHOTS (2)
 #define ENEMY_SHOT_SPEED (3)
 
-#define MAX_LEVELS (2)
+#define MAX_LEVELS (4)
 #define LV_ODD_SPACING (0x01)
 #define LV_ODD_X_SPEED (0x02)
 #define LV_FULL_HEIGHT (0x04)
 
 typedef struct level_info {
 	int spd_x, spd_y;
+	int stop_x_timer, invert_x_timer;
 	char flags;
 } level_info;
 
@@ -46,13 +47,18 @@ struct level {
 	
 	fixed incr_x, incr_y;
 	fixed spd_x, spd_y;
+
+	int stop_x_timer, invert_x_timer;
+	int stop_x_timer_max, invert_x_timer_max;
 	
 	char cheat_skip;
 } level;
 
 const level_info level_infos[MAX_LEVELS] = {
-	{192, 0, LV_ODD_SPACING},
-	{128, 128, LV_ODD_X_SPEED | LV_FULL_HEIGHT}
+	{192, 0, 0, 0, LV_ODD_SPACING},
+	{128, 128, 0, 120, LV_ODD_SPACING | LV_FULL_HEIGHT},
+	{160, 160, 0, 120, LV_ODD_X_SPEED | LV_FULL_HEIGHT},
+	{100, 256, 60, 60, LV_FULL_HEIGHT}
 };
 
 void load_standard_palettes() {
@@ -152,6 +158,9 @@ void handle_enemies_movement() {
 	level.incr_y.w += level.spd_y.w;
 	
 	incr_x = level.incr_x.b.h;
+	if (level.stop_x_timer) {
+		incr_x = 0;
+	}
 
 	for (i = 0; i != MAX_ENEMIES_Y; i++) {
 		enemy = enemies[i];
@@ -184,6 +193,17 @@ void handle_enemies_movement() {
 
 	level.incr_x.b.h = 0;
 	level.incr_y.b.h = 0;
+	
+	if (level.stop_x_timer) {
+		level.stop_x_timer--;
+	} else if (level.invert_x_timer) {
+		level.invert_x_timer--;
+		if (!level.invert_x_timer) level.spd_x.w = -level.spd_x.w;
+	} else {
+		// Completed both timers: reset them.
+		level.stop_x_timer = level.stop_x_timer_max;
+		level.invert_x_timer = level.invert_x_timer_max;
+	}
 }
 
 char count_enemies() {
@@ -279,6 +299,12 @@ void init_level() {
 	level.vertical_spacing = (info->flags & LV_FULL_HEIGHT) ? 64 : 24;
 	level.odd_x_speed = info->flags & LV_ODD_X_SPEED;
 	level.starting_y = (info->flags & LV_FULL_HEIGHT) ? -128 : 0;
+	
+	level.stop_x_timer_max = info->stop_x_timer;
+	level.invert_x_timer_max = info->invert_x_timer;
+	level.stop_x_timer = level.stop_x_timer_max;
+	level.invert_x_timer = level.invert_x_timer_max;
+
 	
 	level.cheat_skip = 0;
 	
