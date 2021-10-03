@@ -15,11 +15,18 @@
 
 #define MAX_ENEMIES_X (3)
 #define MAX_ENEMIES_Y (3)
+#define MAX_ENEMY_SHOTS (2)
+#define ENEMY_SHOT_SPEED (3)
 
 actor player;
 actor shot;
 
 actor enemies[MAX_ENEMIES_Y][MAX_ENEMIES_X];
+actor enemy_shots[MAX_ENEMY_SHOTS];
+
+struct level {
+	char enemy_count;
+} level;
 
 void load_standard_palettes() {
 	SMS_loadBGPalette(sprites_palette_bin);
@@ -41,6 +48,8 @@ void handle_player_input() {
 			shot.x = player.x + 4;
 			shot.y = player.y;
 			shot.active = 1;
+
+			PSGPlayNoRepeat(player_shot_psg);
 		}
 	}
 }
@@ -107,6 +116,8 @@ void handle_enemies_movement() {
 			if (is_colliding_with_shot(enemy)) {
 				enemy->active = 0;
 				shot.active = 0;
+
+				PSGSFXPlay(enemy_death_psg, SFX_CHANNELS2AND3);
 			}
 
 			enemy++;
@@ -114,19 +125,84 @@ void handle_enemies_movement() {
 	}
 }
 
-char are_all_enemies_dead() {
-	static char i, j;
+char count_enemies() {
+	static char i, j, count;
 	static actor *enemy;
 
+	count = 0;
 	for (i = 0; i != MAX_ENEMIES_Y; i++) {
 		enemy = enemies[i];
 		for (j = 0; j != MAX_ENEMIES_X; j++) {
-			if (enemy->active) return 0;
+			if (enemy->active) count++;
 			enemy++;
 		}
 	}
 	
-	return 1;
+	return count;
+}
+
+void fire_as_enemy_shot(actor *enm_shot) {
+	static char i, j, count, target;
+	static actor *enemy;
+	
+	if (!level.enemy_count) return;
+
+	count = 0;
+	target = rand() % level.enemy_count;
+	for (i = 0; i != MAX_ENEMIES_Y; i++) {
+		enemy = enemies[i];
+		for (j = 0; j != MAX_ENEMIES_X; j++) {
+			if (enemy->active) {
+				if (count == target) {
+					enm_shot->x = enemy->x + 4;
+					enm_shot->y = enemy->y + 12;
+					enm_shot->active = 1;
+					
+					return;
+				}
+				count++;
+			}
+			enemy++;
+		}
+	}
+}
+
+void init_enemy_shots() {
+	static char i;
+	static actor *enm_shot;
+
+	for (i = 0, enm_shot = enemy_shots; i != MAX_ENEMY_SHOTS; i++, enm_shot++) {
+		init_actor(enm_shot, (i << 4) + 8, i << 4, 1, 1, 8, 1);
+		enm_shot->active = 0;
+	}
+}
+
+void draw_enemy_shots() {
+	static char i;
+	static actor *enm_shot;
+
+	for (i = 0, enm_shot = enemy_shots; i != MAX_ENEMY_SHOTS; i++, enm_shot++) {
+		draw_actor(enm_shot);
+	}
+}
+
+void handle_enemy_shots_movement() {
+	static char i;
+	static actor *enm_shot;
+
+	for (i = 0, enm_shot = enemy_shots; i != MAX_ENEMY_SHOTS; i++, enm_shot++) {
+		if (enm_shot->active) {
+			enm_shot->y += ENEMY_SHOT_SPEED;
+			if (enm_shot->y > SCREEN_H) enm_shot->active = 0;
+		} else {
+			if (rand() & 0x1F) fire_as_enemy_shot(enm_shot);
+		}
+	}
+}
+
+void interrupt_handler() {
+	PSGFrame();
+	PSGSFXFrame();
 }
 
 void main() {
@@ -138,30 +214,39 @@ void main() {
 	SMS_loadPSGaidencompressedTiles(sprites_tiles_psgcompr, 0);
 	load_standard_palettes();
 
+	SMS_setLineInterruptHandler(&interrupt_handler);
+	SMS_setLineCounter(180);
+	SMS_enableLineInterrupt();
+
 	SMS_displayOn();
 	
 	init_actor(&player, 120, PLAYER_BOTTOM, 2, 1, 2, 1);
-	init_actor(&shot, 120, PLAYER_BOTTOM - 8, 2, 1, 6, 1);
+	init_actor(&shot, 120, PLAYER_BOTTOM - 8, 1, 1, 6, 1);
 
 	init_enemies();
-	
+	init_enemy_shots();	
+
 	shot.active = 0;
 
 	while (1) {
-		if (are_all_enemies_dead()) {
+		level.enemy_count = count_enemies();
+		if (!level.enemy_count) {
 			init_enemies();	
+			init_enemy_shots();
 			shot.active = 0;
 		}
 		
 		handle_player_input();
 		handle_shot_movement();
 		handle_enemies_movement();
+		handle_enemy_shots_movement();
 		
 		SMS_initSprites();
 
 		draw_actor(&player);
 		draw_actor(&shot);
 		draw_enemies();
+		draw_enemy_shots();
 		
 		SMS_finalizeSprites();
 		SMS_waitForVBlank();
@@ -170,7 +255,7 @@ void main() {
 }
 
 SMS_EMBED_SEGA_ROM_HEADER(9999,0); // code 9999 hopefully free, here this means 'homebrew'
-SMS_EMBED_SDSC_HEADER(0,1, 2021,10,01, "Haroldo-OK\\2021", "Geometry Blaster",
+SMS_EMBED_SDSC_HEADER(0,2, 2021,10,02, "Haroldo-OK\\2021", "Geometry Blaster",
   "A geometric shoot-em-up.\n"
   "Made for the Minimalist Game Jam - https://itch.io/jam/minimalist-game-jam\n"
   "Built using devkitSMS & SMSlib - https://github.com/sverx/devkitSMS");
