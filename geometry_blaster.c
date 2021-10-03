@@ -21,6 +21,7 @@
 #define MAX_LEVELS (2)
 #define LV_ODD_SPACING (0x01)
 #define LV_ODD_X_SPEED (0x02)
+#define LV_FULL_HEIGHT (0x04)
 
 typedef struct level_info {
 	int spd_x, spd_y;
@@ -39,6 +40,7 @@ struct level {
 	char enemy_count;
 	
 	char horizontal_spacing, horizontal_odd_spacing;
+	char vertical_spacing;
 	char odd_x_speed;
 	
 	fixed incr_x, incr_y;
@@ -49,7 +51,7 @@ struct level {
 
 const level_info level_infos[MAX_LEVELS] = {
 	{192, 0, LV_ODD_SPACING},
-	{128, 128, LV_ODD_X_SPEED}
+	{128, 128, LV_ODD_X_SPEED | LV_FULL_HEIGHT}
 };
 
 void load_standard_palettes() {
@@ -118,10 +120,10 @@ void init_enemies() {
 	static int x, y;
 	static actor *enemy;
 
-	for (i = 0, y = 0; i != MAX_ENEMIES_Y; i++, y += 32) {
+	for (i = 0, y = 0; i != MAX_ENEMIES_Y; i++, y += level.vertical_spacing) {
 		enemy = enemies[i];
 		for (j = 0, x = i & 1 ? level.horizontal_odd_spacing : 0; j != MAX_ENEMIES_X; j++, x += level.horizontal_spacing) {
-			init_actor(enemy, x, i << 5, 2, 1, 64, 6);
+			init_actor(enemy, x, y, 2, 1, 64, 6);
 			enemy++;
 		}
 	}
@@ -273,6 +275,7 @@ void init_level() {
 	
 	level.horizontal_spacing = 256 / 3;
 	level.horizontal_odd_spacing = (info->flags & LV_ODD_SPACING) ? 256 / 6 : 0;
+	level.vertical_spacing = (info->flags & LV_FULL_HEIGHT) ? 64 : 24;
 	level.odd_x_speed = info->flags & LV_ODD_X_SPEED;
 	
 	level.cheat_skip = 0;
