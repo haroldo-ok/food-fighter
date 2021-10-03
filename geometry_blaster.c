@@ -83,7 +83,7 @@ void init_enemies() {
 
 	for (i = 0, y = 0; i != MAX_ENEMIES_Y; i++, y += 32) {
 		enemy = enemies[i];
-		for (j = 0, x = i & 1 ? 32 : 0; j != MAX_ENEMIES_X; j++, x += (256 / 3)) {
+		for (j = 0, x = i & 1 ? (256/6) : 0; j != MAX_ENEMIES_X; j++, x += (256 / 3)) {
 			init_actor(enemy, x, i << 5, 2, 1, 64, 6);
 			enemy++;
 		}
