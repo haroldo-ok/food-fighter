@@ -18,6 +18,12 @@
 #define MAX_ENEMY_SHOTS (2)
 #define ENEMY_SHOT_SPEED (3)
 
+#define MAX_LEVELS (2)
+
+typedef struct level_info {
+	int spd_x, spd_y;
+} level_info;
+
 actor player;
 actor shot;
 
@@ -33,6 +39,11 @@ struct level {
 	fixed incr_x, incr_y;
 	fixed spd_x, spd_y;
 } level;
+
+const level_info level_infos[MAX_LEVELS] = {
+	{192, 0},
+	{128, 128}
+};
 
 void load_standard_palettes() {
 	SMS_loadBGPalette(sprites_palette_bin);
@@ -223,14 +234,16 @@ void interrupt_handler() {
 }
 
 void init_level() {
+	level_info *info = level_infos + ((level.number - 1) % MAX_LEVELS);
+	
 	level.incr_x.w = 0;
 	level.incr_y.w = 0;
-	level.spd_x.w = 192;
-	level.spd_y.w = 0;
+	level.spd_x.w = info->spd_x;
+	level.spd_y.w = info->spd_y;
 	
 	level.horizontal_spacing = 256 / 3;
 	level.horizontal_odd_spacing = 256 / 6;
-
+	
 	init_enemies();
 	init_enemy_shots();		
 	shot.active = 0;
