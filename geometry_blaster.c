@@ -338,7 +338,7 @@ void main() {
 }
 
 SMS_EMBED_SEGA_ROM_HEADER(9999,0); // code 9999 hopefully free, here this means 'homebrew'
-SMS_EMBED_SDSC_HEADER(0,2, 2021,10,02, "Haroldo-OK\\2021", "Geometry Blaster",
+SMS_EMBED_SDSC_HEADER(0,3, 2021,10,03, "Haroldo-OK\\2021", "Geometry Blaster",
   "A geometric shoot-em-up.\n"
   "Made for the Minimalist Game Jam - https://itch.io/jam/minimalist-game-jam\n"
   "Built using devkitSMS & SMSlib - https://github.com/sverx/devkitSMS");
