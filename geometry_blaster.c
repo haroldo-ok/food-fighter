@@ -19,9 +19,12 @@
 #define ENEMY_SHOT_SPEED (3)
 
 #define MAX_LEVELS (2)
+#define LV_ODD_SPACING (0x01)
+#define LV_ODD_X_SPEED (0x02)
 
 typedef struct level_info {
 	int spd_x, spd_y;
+	char flags;
 } level_info;
 
 actor player;
@@ -34,7 +37,9 @@ struct level {
 	char number;
 	
 	char enemy_count;
+	
 	char horizontal_spacing, horizontal_odd_spacing;
+	char odd_x_speed;
 	
 	fixed incr_x, incr_y;
 	fixed spd_x, spd_y;
@@ -43,8 +48,8 @@ struct level {
 } level;
 
 const level_info level_infos[MAX_LEVELS] = {
-	{192, 0},
-	{128, 128}
+	{192, 0, LV_ODD_SPACING},
+	{128, 128, LV_ODD_X_SPEED}
 };
 
 void load_standard_palettes() {
@@ -138,18 +143,26 @@ void draw_enemies() {
 void handle_enemies_movement() {
 	static char i, j;
 	static actor *enemy;
+	static int incr_x;
 	
 	level.incr_x.w += level.spd_x.w;
 	level.incr_y.w += level.spd_y.w;
+	
+	incr_x = level.incr_x.b.h;
 
 	for (i = 0; i != MAX_ENEMIES_Y; i++) {
 		enemy = enemies[i];
 		for (j = 0; j != MAX_ENEMIES_X; j++) {
 			if (enemy->active) {
-				enemy->x += level.incr_x.b.h;
+				enemy->x += incr_x;
 				enemy->y += level.incr_y.b.h;
 				
-				if (enemy->x > 255) enemy->x -= 255;
+				if (enemy->x > 255) {
+					enemy->x -= 255;
+				} else if (enemy->x < 0) {
+					enemy->x += 255;
+				}
+					
 				if (enemy->y > SCREEN_H) enemy->y -= SCREEN_H;
 				
 				if (is_colliding_with_shot(enemy)) {
@@ -162,6 +175,8 @@ void handle_enemies_movement() {
 
 			enemy++;
 		}
+		
+		if (level.odd_x_speed) incr_x = -incr_x;
 	}
 
 	level.incr_x.b.h = 0;
@@ -257,7 +272,8 @@ void init_level() {
 	level.spd_y.w = info->spd_y;
 	
 	level.horizontal_spacing = 256 / 3;
-	level.horizontal_odd_spacing = 256 / 6;
+	level.horizontal_odd_spacing = (info->flags & LV_ODD_SPACING) ? 256 / 6 : 0;
+	level.odd_x_speed = info->flags & LV_ODD_X_SPEED;
 	
 	level.cheat_skip = 0;
 	
