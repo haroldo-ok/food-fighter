@@ -48,6 +48,8 @@ void handle_player_input() {
 			shot.x = player.x + 4;
 			shot.y = player.y;
 			shot.active = 1;
+
+			PSGPlayNoRepeat(player_shot_psg);
 		}
 	}
 }
@@ -114,6 +116,8 @@ void handle_enemies_movement() {
 			if (is_colliding_with_shot(enemy)) {
 				enemy->active = 0;
 				shot.active = 0;
+
+				PSGSFXPlay(enemy_death_psg, SFX_CHANNELS2AND3);
 			}
 
 			enemy++;
@@ -149,7 +153,6 @@ void fire_as_enemy_shot(actor *enm_shot) {
 		enemy = enemies[i];
 		for (j = 0; j != MAX_ENEMIES_X; j++) {
 			if (enemy->active) {
-				count++;
 				if (count == target) {
 					enm_shot->x = enemy->x + 4;
 					enm_shot->y = enemy->y + 12;
@@ -157,6 +160,7 @@ void fire_as_enemy_shot(actor *enm_shot) {
 					
 					return;
 				}
+				count++;
 			}
 			enemy++;
 		}
@@ -191,9 +195,14 @@ void handle_enemy_shots_movement() {
 			enm_shot->y += ENEMY_SHOT_SPEED;
 			if (enm_shot->y > SCREEN_H) enm_shot->active = 0;
 		} else {
-			if (rand() & 0xF) fire_as_enemy_shot(enm_shot);
+			if (rand() & 0x1F) fire_as_enemy_shot(enm_shot);
 		}
 	}
+}
+
+void interrupt_handler() {
+	PSGFrame();
+	PSGSFXFrame();
 }
 
 void main() {
@@ -204,6 +213,10 @@ void main() {
 	SMS_displayOff();
 	SMS_loadPSGaidencompressedTiles(sprites_tiles_psgcompr, 0);
 	load_standard_palettes();
+
+	SMS_setLineInterruptHandler(&interrupt_handler);
+	SMS_setLineCounter(180);
+	SMS_enableLineInterrupt();
 
 	SMS_displayOn();
 	
