@@ -18,6 +18,18 @@
 #define MAX_ENEMY_SHOTS (2)
 #define ENEMY_SHOT_SPEED (3)
 
+#define MAX_LEVELS (5)
+#define LV_ODD_SPACING (0x01)
+#define LV_ODD_X_SPEED (0x02)
+#define LV_FULL_HEIGHT (0x04)
+
+typedef struct level_info {
+	int spd_x, spd_y;
+	int stop_x_timer, invert_x_timer;
+	int stop_y_timer, advance_y_timer, invert_y_timer;
+	char flags;
+} level_info;
+
 actor player;
 actor shot;
 
@@ -25,8 +37,34 @@ actor enemies[MAX_ENEMIES_Y][MAX_ENEMIES_X];
 actor enemy_shots[MAX_ENEMY_SHOTS];
 
 struct level {
+	char number;
+	
 	char enemy_count;
+	
+	char horizontal_spacing, horizontal_odd_spacing;
+	char vertical_spacing;	
+	char odd_x_speed;
+	int starting_y;
+	
+	fixed incr_x, incr_y;
+	fixed spd_x, spd_y;
+
+	int stop_x_timer, invert_x_timer;
+	int stop_x_timer_max, invert_x_timer_max;
+
+	int stop_y_timer, advance_y_timer, invert_y_timer;
+	int stop_y_timer_max, advance_y_timer_max, invert_y_timer_max;
+	
+	char cheat_skip;
 } level;
+
+const level_info level_infos[MAX_LEVELS] = {
+	{192, 0, 0, 0, 0, 0, 0, LV_ODD_SPACING},
+	{128, 128, 0, 120, 0, 0, 0, LV_ODD_SPACING | LV_FULL_HEIGHT},
+	{160, 160, 0, 120, 0, 0, 0, LV_ODD_X_SPEED | LV_FULL_HEIGHT},
+	{256, 160, 0, 0, 0, 0, 60, LV_ODD_SPACING},
+	{160, 256, 60, 60, 37, 93, 0, LV_FULL_HEIGHT}
+};
 
 void load_standard_palettes() {
 	SMS_loadBGPalette(sprites_palette_bin);
@@ -52,6 +90,19 @@ void handle_player_input() {
 			PSGPlayNoRepeat(player_shot_psg);
 		}
 	}
+	
+	if ((joy & PORT_A_KEY_UP) && (joy & PORT_A_KEY_1)&& (joy & PORT_A_KEY_2)) {
+		level.cheat_skip = 1;
+	}
+}
+
+void wait_button_release() {
+	unsigned char joy;
+	
+	do {
+		SMS_waitForVBlank();
+		joy = SMS_getKeysStatus();		
+	} while (joy & (PORT_A_KEY_1 | PORT_A_KEY_2));
 }
 
 void handle_shot_movement() {
@@ -81,10 +132,10 @@ void init_enemies() {
 	static int x, y;
 	static actor *enemy;
 
-	for (i = 0, y = 0; i != MAX_ENEMIES_Y; i++, y += 32) {
+	for (i = 0, y = level.starting_y; i != MAX_ENEMIES_Y; i++, y += level.vertical_spacing) {
 		enemy = enemies[i];
-		for (j = 0, x = i & 1 ? 32 : 0; j != MAX_ENEMIES_X; j++, x += (256 / 3)) {
-			init_actor(enemy, x, i << 5, 2, 1, 64, 6);
+		for (j = 0, x = i & 1 ? level.horizontal_odd_spacing : 0; j != MAX_ENEMIES_X; j++, x += level.horizontal_spacing) {
+			init_actor(enemy, x, y, 2, 1, 64, 6);
 			enemy++;
 		}
 	}
@@ -106,22 +157,72 @@ void draw_enemies() {
 void handle_enemies_movement() {
 	static char i, j;
 	static actor *enemy;
+	static int incr_x, incr_y;
+	
+	level.incr_x.w += level.spd_x.w;
+	level.incr_y.w += level.spd_y.w;
+	
+	incr_x = level.incr_x.b.h;
+	if (level.stop_x_timer) incr_x = 0;
+	
+	incr_y = level.incr_y.b.h;
+	if (level.stop_y_timer) incr_y = 0;
 
 	for (i = 0; i != MAX_ENEMIES_Y; i++) {
 		enemy = enemies[i];
 		for (j = 0; j != MAX_ENEMIES_X; j++) {
-			enemy->x++;
-			if (enemy->x > 255) enemy->x -= 255;
-			
-			if (is_colliding_with_shot(enemy)) {
-				enemy->active = 0;
-				shot.active = 0;
+			if (enemy->active) {
+				enemy->x += incr_x;
+				enemy->y += incr_y;
+				
+				if (enemy->x > 255) {
+					enemy->x -= 255;
+				} else if (enemy->x < 0) {
+					enemy->x += 255;
+				}
+					
+				if (enemy->y > SCREEN_H) enemy->y -= SCREEN_H;
+				
+				if (is_colliding_with_shot(enemy)) {
+					enemy->active = 0;
+					shot.active = 0;
 
-				PSGSFXPlay(enemy_death_psg, SFX_CHANNELS2AND3);
+					PSGSFXPlay(enemy_death_psg, SFX_CHANNELS2AND3);
+				}
 			}
 
 			enemy++;
 		}
+		
+		if (level.odd_x_speed) incr_x = -incr_x;
+	}
+
+	level.incr_x.b.h = 0;
+	level.incr_y.b.h = 0;
+	
+	if (level.stop_x_timer) {
+		level.stop_x_timer--;
+	} else if (level.invert_x_timer) {
+		level.invert_x_timer--;
+		if (!level.invert_x_timer) level.spd_x.w = -level.spd_x.w;
+	} else {
+		// Completed both timers: reset them.
+		level.stop_x_timer = level.stop_x_timer_max;
+		level.invert_x_timer = level.invert_x_timer_max;
+	}
+	
+	if (level.stop_y_timer) {
+		level.stop_y_timer--;
+	} else if (level.advance_y_timer) {
+		level.advance_y_timer--;
+	} else if (level.invert_y_timer) {
+		level.invert_y_timer--;
+		if (!level.invert_y_timer) level.spd_y.w = -level.spd_y.w;
+	} else {
+		// Completed both timers: reset them.
+		level.stop_y_timer = level.stop_y_timer_max;
+		level.advance_y_timer = level.advance_y_timer_max;
+		level.invert_y_timer = level.invert_y_timer_max;
 	}
 }
 
@@ -205,6 +306,40 @@ void interrupt_handler() {
 	PSGSFXFrame();
 }
 
+void init_level() {
+	level_info *info = level_infos + ((level.number - 1) % MAX_LEVELS);
+	
+	level.incr_x.w = 0;
+	level.incr_y.w = 0;
+	level.spd_x.w = info->spd_x;
+	level.spd_y.w = info->spd_y;
+	
+	level.horizontal_spacing = 256 / 3;
+	level.horizontal_odd_spacing = (info->flags & LV_ODD_SPACING) ? 256 / 6 : 0;
+	level.vertical_spacing = (info->flags & LV_FULL_HEIGHT) ? 64 : 24;
+	level.odd_x_speed = info->flags & LV_ODD_X_SPEED;
+	level.starting_y = (info->flags & LV_FULL_HEIGHT) ? -128 : 0;
+	
+	level.stop_x_timer_max = info->stop_x_timer;
+	level.invert_x_timer_max = info->invert_x_timer;
+	level.stop_x_timer = level.stop_x_timer_max;
+	level.invert_x_timer = level.invert_x_timer_max;
+	
+	level.stop_y_timer_max = info->stop_y_timer;
+	level.advance_y_timer_max = info->advance_y_timer;
+	level.invert_y_timer_max = info->invert_y_timer;
+	level.stop_y_timer = level.stop_y_timer_max;
+	level.advance_y_timer = level.advance_y_timer_max;
+	level.invert_y_timer = level.invert_y_timer_max;
+
+	
+	level.cheat_skip = 0;
+	
+	init_enemies();
+	init_enemy_shots();		
+	shot.active = 0;
+}
+
 void main() {
 	SMS_useFirstHalfTilesforSprites(1);
 	SMS_setSpriteMode(SPRITEMODE_TALL);
@@ -223,17 +358,18 @@ void main() {
 	init_actor(&player, 120, PLAYER_BOTTOM, 2, 1, 2, 1);
 	init_actor(&shot, 120, PLAYER_BOTTOM - 8, 1, 1, 6, 1);
 
-	init_enemies();
-	init_enemy_shots();	
-
-	shot.active = 0;
+	level.number = 1;
+	init_level();
 
 	while (1) {
 		level.enemy_count = count_enemies();
-		if (!level.enemy_count) {
-			init_enemies();	
-			init_enemy_shots();
-			shot.active = 0;
+		if (!level.enemy_count || level.cheat_skip) {
+			if (level.cheat_skip) {
+				wait_button_release();
+			}
+			
+			level.number++;
+			init_level();
 		}
 		
 		handle_player_input();
@@ -255,7 +391,7 @@ void main() {
 }
 
 SMS_EMBED_SEGA_ROM_HEADER(9999,0); // code 9999 hopefully free, here this means 'homebrew'
-SMS_EMBED_SDSC_HEADER(0,2, 2021,10,02, "Haroldo-OK\\2021", "Geometry Blaster",
+SMS_EMBED_SDSC_HEADER(0,3, 2021,10,03, "Haroldo-OK\\2021", "Geometry Blaster",
   "A geometric shoot-em-up.\n"
   "Made for the Minimalist Game Jam - https://itch.io/jam/minimalist-game-jam\n"
   "Built using devkitSMS & SMSlib - https://github.com/sverx/devkitSMS");
