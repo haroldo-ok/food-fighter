@@ -38,6 +38,8 @@ struct level {
 	
 	fixed incr_x, incr_y;
 	fixed spd_x, spd_y;
+	
+	char cheat_skip;
 } level;
 
 const level_info level_infos[MAX_LEVELS] = {
@@ -69,6 +71,19 @@ void handle_player_input() {
 			PSGPlayNoRepeat(player_shot_psg);
 		}
 	}
+	
+	if ((joy & PORT_A_KEY_UP) && (joy & PORT_A_KEY_1)&& (joy & PORT_A_KEY_2)) {
+		level.cheat_skip = 1;
+	}
+}
+
+void wait_button_release() {
+	unsigned char joy;
+	
+	do {
+		SMS_waitForVBlank();
+		joy = SMS_getKeysStatus();		
+	} while (joy & (PORT_A_KEY_1 | PORT_A_KEY_2));
 }
 
 void handle_shot_movement() {
@@ -244,6 +259,8 @@ void init_level() {
 	level.horizontal_spacing = 256 / 3;
 	level.horizontal_odd_spacing = 256 / 6;
 	
+	level.cheat_skip = 0;
+	
 	init_enemies();
 	init_enemy_shots();		
 	shot.active = 0;
@@ -272,7 +289,11 @@ void main() {
 
 	while (1) {
 		level.enemy_count = count_enemies();
-		if (!level.enemy_count) {
+		if (!level.enemy_count || level.cheat_skip) {
+			if (level.cheat_skip) {
+				wait_button_release();
+			}
+			
 			level.number++;
 			init_level();
 		}
