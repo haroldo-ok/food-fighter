@@ -1,5 +1,5 @@
-PRJNAME := geometry_blaster
-OBJS := data.rel actor.rel geometry_blaster.rel
+PRJNAME := food_fighter
+OBJS := data.rel actor.rel food_fighter.rel
 
 all: $(PRJNAME).sms
 

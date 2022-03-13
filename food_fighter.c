@@ -19,6 +19,7 @@
 #define ENEMY_SHOT_SPEED (3)
 
 #define MAX_LEVELS (5)
+#define MAX_ENEMY_TILES (15)
 #define LV_ODD_SPACING (0x01)
 #define LV_ODD_X_SPEED (0x02)
 #define LV_FULL_HEIGHT (0x04)
@@ -40,6 +41,7 @@ struct level {
 	char number;
 	
 	char enemy_count;
+	char enemy_tile;
 	
 	char horizontal_spacing, horizontal_odd_spacing;
 	char vertical_spacing;	
@@ -135,7 +137,7 @@ void init_enemies() {
 	for (i = 0, y = level.starting_y; i != MAX_ENEMIES_Y; i++, y += level.vertical_spacing) {
 		enemy = enemies[i];
 		for (j = 0, x = i & 1 ? level.horizontal_odd_spacing : 0; j != MAX_ENEMIES_X; j++, x += level.horizontal_spacing) {
-			init_actor(enemy, x, y, 2, 1, 64, 6);
+			init_actor(enemy, x, y, 2, 1, level.enemy_tile, 1);
 			enemy++;
 		}
 	}
@@ -309,6 +311,8 @@ void interrupt_handler() {
 void init_level() {
 	level_info *info = level_infos + ((level.number - 1) % MAX_LEVELS);
 	
+	level.enemy_tile = 64 + (((level.number - 1) % MAX_ENEMY_TILES) << 2);
+	
 	level.incr_x.w = 0;
 	level.incr_y.w = 0;
 	level.spd_x.w = info->spd_x;
@@ -391,7 +395,7 @@ void main() {
 }
 
 SMS_EMBED_SEGA_ROM_HEADER(9999,0); // code 9999 hopefully free, here this means 'homebrew'
-SMS_EMBED_SDSC_HEADER(0,3, 2021,10,03, "Haroldo-OK\\2021", "Geometry Blaster",
-  "A geometric shoot-em-up.\n"
-  "Made for the Minimalist Game Jam - https://itch.io/jam/minimalist-game-jam\n"
+SMS_EMBED_SDSC_HEADER(0,1, 2022,03,13, "Haroldo-OK\\2022", "Food Fighter",
+  "A food-based SHMUP.\n"
+  "Made for the SMS Power! Coding Competition 2022 - https://www.smspower.org/forums/18879-Competitions2022DeadlineIs27thMarch\n"
   "Built using devkitSMS & SMSlib - https://github.com/sverx/devkitSMS");
