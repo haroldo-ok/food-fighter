@@ -1,2 +1,4 @@
-# geometry-blaster
-A geometric shott-em-up made for the Sega Master System. Originally made for the Minimalist Game Jam
+# Food Fighter
+A food-based SHMUP made for the SMS Power! Coding Competition 2022.    
+
+Based on https://haroldo-ok.itch.io/geometry-blaster
