@@ -19,6 +19,7 @@
 #define ENEMY_SHOT_SPEED (3)
 
 #define MAX_LEVELS (5)
+#define MAX_ENEMY_TILES (15)
 #define LV_ODD_SPACING (0x01)
 #define LV_ODD_X_SPEED (0x02)
 #define LV_FULL_HEIGHT (0x04)
@@ -40,6 +41,7 @@ struct level {
 	char number;
 	
 	char enemy_count;
+	char enemy_tile;
 	
 	char horizontal_spacing, horizontal_odd_spacing;
 	char vertical_spacing;	
@@ -135,7 +137,7 @@ void init_enemies() {
 	for (i = 0, y = level.starting_y; i != MAX_ENEMIES_Y; i++, y += level.vertical_spacing) {
 		enemy = enemies[i];
 		for (j = 0, x = i & 1 ? level.horizontal_odd_spacing : 0; j != MAX_ENEMIES_X; j++, x += level.horizontal_spacing) {
-			init_actor(enemy, x, y, 2, 1, 64, 6);
+			init_actor(enemy, x, y, 2, 1, level.enemy_tile, 1);
 			enemy++;
 		}
 	}
@@ -308,6 +310,8 @@ void interrupt_handler() {
 
 void init_level() {
 	level_info *info = level_infos + ((level.number - 1) % MAX_LEVELS);
+	
+	level.enemy_tile = 64 + (((level.number - 1) % MAX_ENEMY_TILES) << 2);
 	
 	level.incr_x.w = 0;
 	level.incr_y.w = 0;
