@@ -64,6 +64,8 @@ struct level {
 	int stop_y_timer, advance_y_timer, invert_y_timer;
 	int stop_y_timer_max, advance_y_timer_max, invert_y_timer_max;
 	
+	numeric_label label;
+	
 	char cheat_skip;
 } level;
 
@@ -351,7 +353,7 @@ void draw_numeric_label(numeric_label *lbl) {
 }
 
 void init_score() {
-	init_numeric_label(&score, 3, 0);
+	init_numeric_label(&score, 8, 1);
 }
 
 void add_score(int delta) {
@@ -397,6 +399,13 @@ void init_level() {
 	init_enemies();
 	init_enemy_shots();		
 	shot.active = 0;
+
+	init_numeric_label(&level.label, 29, 1);
+	set_numeric_label(&level.label, level.number);
+}
+
+void draw_level_number() {
+	draw_numeric_label(&level.label);
 }
 
 void main() {
@@ -410,7 +419,9 @@ void main() {
 	load_standard_palettes();
 
 	SMS_setNextTileatXY(1, 1);
-	puts("Test!");
+	puts("Score: ");
+	SMS_setNextTileatXY(22, 1);
+	puts("Level: ");
 
 	SMS_setLineInterruptHandler(&interrupt_handler);
 	SMS_setLineCounter(180);
@@ -453,6 +464,7 @@ void main() {
 		SMS_copySpritestoSAT();
 
 		draw_score();
+		draw_level_number();
 	}
 }
 
