@@ -31,6 +31,12 @@ typedef struct level_info {
 	char flags;
 } level_info;
 
+typedef struct numeric_label {
+	char x, y;
+	unsigned int value;
+	char dirty;
+} numeric_label;
+
 actor player;
 actor shot;
 
@@ -60,6 +66,8 @@ struct level {
 	char cheat_skip;
 } level;
 
+numeric_label score;
+
 const level_info level_infos[MAX_LEVELS] = {
 	{192, 0, 0, 0, 0, 0, 0, LV_ODD_SPACING},
 	{128, 128, 0, 120, 0, 0, 0, LV_ODD_SPACING | LV_FULL_HEIGHT},
@@ -67,6 +75,8 @@ const level_info level_infos[MAX_LEVELS] = {
 	{256, 160, 0, 0, 0, 0, 60, LV_ODD_SPACING},
 	{160, 256, 60, 60, 37, 93, 0, LV_FULL_HEIGHT}
 };
+
+void add_score(int delta);
 
 void load_standard_palettes() {
 	SMS_loadBGPalette(sprites_palette_bin);
@@ -194,6 +204,7 @@ void handle_enemies_movement() {
 					enemy->active = 0;
 					shot.active = 0;
 
+					add_score(10);
 					PSGSFXPlay(enemy_death_psg, SFX_CHANNELS2AND3);
 				}
 			}
@@ -313,6 +324,43 @@ void interrupt_handler() {
 	PSGSFXFrame();
 }
 
+void set_numeric_label(numeric_label *lbl, unsigned int value) {
+	lbl->value = value;
+	lbl->dirty = 1;
+}
+
+void init_numeric_label(numeric_label *lbl, char x, char y) {
+	set_numeric_label(lbl, 0);
+	lbl->x = x;
+	lbl->y = y;
+}
+
+void add_numeric_label(numeric_label *lbl, int delta) {
+	lbl->value += delta;
+	lbl->dirty = 1;	
+}
+
+void draw_numeric_label(numeric_label *lbl) {
+	if (!lbl->dirty) return;
+	
+	SMS_setNextTileatXY(lbl->x, lbl->y);
+	printf("%d", lbl->value);
+	
+	lbl->dirty = 0;
+}
+
+void init_score() {
+	init_numeric_label(&score, 3, 0);
+}
+
+void add_score(int delta) {
+	add_numeric_label(&score, delta);
+}
+
+void draw_score() {
+	draw_numeric_label(&score);
+}
+
 void init_level() {
 	level_info *info = level_infos + ((level.number - 1) % MAX_LEVELS);
 	
@@ -370,8 +418,9 @@ void main() {
 	
 	init_actor(&player, 120, PLAYER_BOTTOM, 2, 1, 2, 1);
 	init_actor(&shot, 120, PLAYER_BOTTOM - 8, 1, 1, 6, 1);
-
+	
 	level.number = 1;
+	init_score();
 	init_level();
 
 	while (1) {
@@ -400,6 +449,8 @@ void main() {
 		SMS_finalizeSprites();
 		SMS_waitForVBlank();
 		SMS_copySpritestoSAT();
+
+		draw_score();
 	}
 }
 
