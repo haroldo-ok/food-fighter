@@ -31,6 +31,12 @@ typedef struct level_info {
 	char flags;
 } level_info;
 
+typedef struct numeric_label {
+	char x, y;
+	unsigned int value;
+	char dirty;
+} numeric_label;
+
 actor player;
 actor shot;
 
@@ -42,6 +48,7 @@ struct level {
 	
 	char enemy_count;
 	char enemy_tile;
+	int enemy_score;
 	
 	char horizontal_spacing, horizontal_odd_spacing;
 	char vertical_spacing;	
@@ -57,8 +64,12 @@ struct level {
 	int stop_y_timer, advance_y_timer, invert_y_timer;
 	int stop_y_timer_max, advance_y_timer_max, invert_y_timer_max;
 	
+	numeric_label label;
+	
 	char cheat_skip;
 } level;
+
+numeric_label score;
 
 const level_info level_infos[MAX_LEVELS] = {
 	{192, 0, 0, 0, 0, 0, 0, LV_ODD_SPACING},
@@ -68,10 +79,17 @@ const level_info level_infos[MAX_LEVELS] = {
 	{160, 256, 60, 60, 37, 93, 0, LV_FULL_HEIGHT}
 };
 
+void add_score(int delta);
+
 void load_standard_palettes() {
 	SMS_loadBGPalette(sprites_palette_bin);
 	SMS_loadSpritePalette(sprites_palette_bin);
 	SMS_setSpritePaletteColor(0, 0);
+}
+
+void configure_text() {
+	SMS_load1bppTiles(font_1bpp, 352, font_1bpp_size, 0, 1);
+	SMS_configureTextRenderer((352 - 32) | TILE_PRIORITY);
 }
 
 void handle_player_input() {
@@ -189,6 +207,7 @@ void handle_enemies_movement() {
 					enemy->active = 0;
 					shot.active = 0;
 
+					add_score(level.enemy_score);
 					PSGSFXPlay(enemy_death_psg, SFX_CHANNELS2AND3);
 				}
 			}
@@ -308,10 +327,48 @@ void interrupt_handler() {
 	PSGSFXFrame();
 }
 
+void set_numeric_label(numeric_label *lbl, unsigned int value) {
+	lbl->value = value;
+	lbl->dirty = 1;
+}
+
+void init_numeric_label(numeric_label *lbl, char x, char y) {
+	set_numeric_label(lbl, 0);
+	lbl->x = x;
+	lbl->y = y;
+}
+
+void add_numeric_label(numeric_label *lbl, int delta) {
+	lbl->value += delta;
+	lbl->dirty = 1;	
+}
+
+void draw_numeric_label(numeric_label *lbl) {
+	if (!lbl->dirty) return;
+	
+	SMS_setNextTileatXY(lbl->x, lbl->y);
+	printf("%d", lbl->value);
+	
+	lbl->dirty = 0;
+}
+
+void init_score() {
+	init_numeric_label(&score, 8, 1);
+}
+
+void add_score(int delta) {
+	add_numeric_label(&score, delta);
+}
+
+void draw_score() {
+	draw_numeric_label(&score);
+}
+
 void init_level() {
 	level_info *info = level_infos + ((level.number - 1) % MAX_LEVELS);
 	
 	level.enemy_tile = 64 + (((level.number - 1) % MAX_ENEMY_TILES) << 2);
+	level.enemy_score = level.number / 3 * 5 + 5;
 	
 	level.incr_x.w = 0;
 	level.incr_y.w = 0;
@@ -342,6 +399,13 @@ void init_level() {
 	init_enemies();
 	init_enemy_shots();		
 	shot.active = 0;
+
+	init_numeric_label(&level.label, 29, 1);
+	set_numeric_label(&level.label, level.number);
+}
+
+void draw_level_number() {
+	draw_numeric_label(&level.label);
 }
 
 void main() {
@@ -351,7 +415,13 @@ void main() {
 
 	SMS_displayOff();
 	SMS_loadPSGaidencompressedTiles(sprites_tiles_psgcompr, 0);
+	configure_text();
 	load_standard_palettes();
+
+	SMS_setNextTileatXY(1, 1);
+	puts("Score: ");
+	SMS_setNextTileatXY(22, 1);
+	puts("Level: ");
 
 	SMS_setLineInterruptHandler(&interrupt_handler);
 	SMS_setLineCounter(180);
@@ -361,8 +431,9 @@ void main() {
 	
 	init_actor(&player, 120, PLAYER_BOTTOM, 2, 1, 2, 1);
 	init_actor(&shot, 120, PLAYER_BOTTOM - 8, 1, 1, 6, 1);
-
+	
 	level.number = 1;
+	init_score();
 	init_level();
 
 	while (1) {
@@ -391,6 +462,9 @@ void main() {
 		SMS_finalizeSprites();
 		SMS_waitForVBlank();
 		SMS_copySpritestoSAT();
+
+		draw_score();
+		draw_level_number();
 	}
 }
 

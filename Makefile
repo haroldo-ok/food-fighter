@@ -3,7 +3,7 @@ OBJS := data.rel actor.rel food_fighter.rel
 
 all: $(PRJNAME).sms
 
-data.c: data/* data/sprites_tiles.psgcompr
+data.c: data/* data/sprites_tiles.psgcompr data/font.1bpp
 	folder2c data data
 	
 data/sprites_tiles.psgcompr: data/img/sprites.png
