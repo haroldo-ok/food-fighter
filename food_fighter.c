@@ -48,6 +48,7 @@ struct level {
 	
 	char enemy_count;
 	char enemy_tile;
+	int enemy_score;
 	
 	char horizontal_spacing, horizontal_odd_spacing;
 	char vertical_spacing;	
@@ -204,7 +205,7 @@ void handle_enemies_movement() {
 					enemy->active = 0;
 					shot.active = 0;
 
-					add_score(10);
+					add_score(level.enemy_score);
 					PSGSFXPlay(enemy_death_psg, SFX_CHANNELS2AND3);
 				}
 			}
@@ -365,6 +366,7 @@ void init_level() {
 	level_info *info = level_infos + ((level.number - 1) % MAX_LEVELS);
 	
 	level.enemy_tile = 64 + (((level.number - 1) % MAX_ENEMY_TILES) << 2);
+	level.enemy_score = level.number / 3 * 5 + 5;
 	
 	level.incr_x.w = 0;
 	level.incr_y.w = 0;
