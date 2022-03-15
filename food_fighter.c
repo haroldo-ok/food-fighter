@@ -74,6 +74,11 @@ void load_standard_palettes() {
 	SMS_setSpritePaletteColor(0, 0);
 }
 
+void configure_text() {
+	SMS_load1bppTiles(font_1bpp, 352, font_1bpp_size, 0, 1);
+	SMS_configureTextRenderer((352 - 32) | TILE_PRIORITY);
+}
+
 void handle_player_input() {
 	unsigned char joy = SMS_getKeysStatus();
 
@@ -351,7 +356,11 @@ void main() {
 
 	SMS_displayOff();
 	SMS_loadPSGaidencompressedTiles(sprites_tiles_psgcompr, 0);
+	configure_text();
 	load_standard_palettes();
+
+	SMS_setNextTileatXY(1, 1);
+	puts("Test!");
 
 	SMS_setLineInterruptHandler(&interrupt_handler);
 	SMS_setLineCounter(180);
