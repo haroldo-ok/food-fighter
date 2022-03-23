@@ -153,17 +153,32 @@ char is_colliding_with_shot(actor *act) {
 	return 1;
 }
 
+char is_player_colliding_with_enemy(actor *enm) {
+	static int delta;
+	
+	if (!enm->active) return 0;
+	if (!player.active) return 0;
+
+	delta = player.y - enm->y;
+	if (delta < -12 || delta > 12) return 0;	
+
+	delta = player.x - enm->x;
+	if (delta < -12 || delta > 12) return 0;
+	
+	return 1;
+}
+
 char is_player_colliding_with_shot(actor *sht) {
 	static int delta;
 	
-	if (!player.active) return 0;
 	if (!sht->active) return 0;
+	if (!player.active) return 0;
 
 	delta = player.y - sht->y;
-	if (delta < -6 || delta > player.pixel_h + 14) return 0;	
+	if (delta < -6 || delta > 12) return 0;	
 
 	delta = player.x - sht->x;
-	if (delta < -6 || delta > player.pixel_w + 14) return 0;
+	if (delta < -6 || delta > 12) return 0;
 	
 	return 1;
 }
@@ -234,6 +249,10 @@ void handle_enemies_movement() {
 
 					add_score(level.enemy_score);
 					PSGSFXPlay(enemy_death_psg, SFX_CHANNELS2AND3);
+				}
+				
+				if (!ply_ctl.death_delay && is_player_colliding_with_enemy(enemy)) {
+					kill_player();
 				}
 			}
 
