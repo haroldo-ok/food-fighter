@@ -16,7 +16,7 @@
 #define MAX_ENEMIES_X (3)
 #define MAX_ENEMIES_Y (3)
 #define MAX_ENEMY_SHOTS (2)
-#define ENEMY_SHOT_SPEED (3)
+#define ENEMY_SHOT_SPEED (2)
 
 #define MAX_LEVELS (5)
 #define MAX_ENEMY_TILES (15)
@@ -74,6 +74,7 @@ struct level {
 } level;
 
 numeric_label score;
+numeric_label lives;
 
 const level_info level_infos[MAX_LEVELS] = {
 	{192, 0, 0, 0, 0, 0, 0, LV_ODD_SPACING},
@@ -84,6 +85,7 @@ const level_info level_infos[MAX_LEVELS] = {
 };
 
 void add_score(int delta);
+void add_lives(int delta);
 
 void load_standard_palettes() {
 	SMS_loadBGPalette(sprites_palette_bin);
@@ -186,6 +188,7 @@ char is_player_colliding_with_shot(actor *sht) {
 void kill_player() {
 	ply_ctl.death_delay = 120;
 	PSGPlayNoRepeat(player_death_psg);
+	add_lives(-1);
 }
 
 void init_enemies() {
@@ -365,7 +368,7 @@ void handle_enemy_shots_movement() {
 				kill_player();
 			}
 		} else {
-			if (rand() & 0x1F) fire_as_enemy_shot(enm_shot);
+			if (rand() & 0x7FF) fire_as_enemy_shot(enm_shot);
 		}
 	}
 }
@@ -456,6 +459,19 @@ void draw_level_number() {
 	draw_numeric_label(&level.label);
 }
 
+void init_lives() {
+	init_numeric_label(&lives, 20, 1);
+	set_numeric_label(&lives, 3);
+}
+
+void add_lives(int delta) {
+	add_numeric_label(&lives, delta);
+}
+
+void draw_lives() {
+	draw_numeric_label(&lives);
+}
+
 void main() {
 	SMS_useFirstHalfTilesforSprites(1);
 	SMS_setSpriteMode(SPRITEMODE_TALL);
@@ -468,6 +484,8 @@ void main() {
 
 	SMS_setNextTileatXY(1, 1);
 	puts("Score: ");
+	SMS_setNextTileatXY(14, 1);
+	puts("Lives: ");
 	SMS_setNextTileatXY(22, 1);
 	puts("Level: ");
 
@@ -483,6 +501,7 @@ void main() {
 	
 	level.number = 1;
 	init_score();
+	init_lives();
 	init_level();
 
 	while (1) {
@@ -513,6 +532,7 @@ void main() {
 		SMS_copySpritestoSAT();
 
 		draw_score();
+		draw_lives();
 		draw_level_number();
 	}
 }
