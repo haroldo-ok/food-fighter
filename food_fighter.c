@@ -37,6 +37,10 @@ typedef struct numeric_label {
 	char dirty;
 } numeric_label;
 
+struct ply_ctl {
+	char death_delay;
+} ply_ctl;
+
 actor player;
 actor shot;
 
@@ -114,6 +118,8 @@ void handle_player_input() {
 	if ((joy & PORT_A_KEY_UP) && (joy & PORT_A_KEY_1)&& (joy & PORT_A_KEY_2)) {
 		level.cheat_skip = 1;
 	}
+
+	if (ply_ctl.death_delay) ply_ctl.death_delay--;
 }
 
 void wait_button_release() {
@@ -145,6 +151,25 @@ char is_colliding_with_shot(actor *act) {
 	if (delta < -6 || delta > act->pixel_w + 14) return 0;
 	
 	return 1;
+}
+
+char is_player_colliding_with_shot(actor *sht) {
+	static int delta;
+	
+	if (!player.active) return 0;
+	if (!sht->active) return 0;
+
+	delta = player.y - sht->y;
+	if (delta < -6 || delta > player.pixel_h + 14) return 0;	
+
+	delta = player.x - sht->x;
+	if (delta < -6 || delta > player.pixel_w + 14) return 0;
+	
+	return 1;
+}
+
+void kill_player() {
+	ply_ctl.death_delay = 120;
 }
 
 void init_enemies() {
@@ -316,6 +341,9 @@ void handle_enemy_shots_movement() {
 		if (enm_shot->active) {
 			enm_shot->y += ENEMY_SHOT_SPEED;
 			if (enm_shot->y > SCREEN_H) enm_shot->active = 0;
+			if (!ply_ctl.death_delay && is_player_colliding_with_shot(enm_shot)) {
+				kill_player();
+			}
 		} else {
 			if (rand() & 0x1F) fire_as_enemy_shot(enm_shot);
 		}
@@ -431,6 +459,7 @@ void main() {
 	
 	init_actor(&player, 120, PLAYER_BOTTOM, 2, 1, 2, 1);
 	init_actor(&shot, 120, PLAYER_BOTTOM - 8, 1, 1, 6, 1);
+	ply_ctl.death_delay = 0;
 	
 	level.number = 1;
 	init_score();
@@ -454,7 +483,7 @@ void main() {
 		
 		SMS_initSprites();
 
-		draw_actor(&player);
+		if (!(ply_ctl.death_delay & 0x04)) draw_actor(&player);
 		draw_actor(&shot);
 		draw_enemies();
 		draw_enemy_shots();
