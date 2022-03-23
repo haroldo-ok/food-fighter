@@ -16,7 +16,7 @@
 #define MAX_ENEMIES_X (3)
 #define MAX_ENEMIES_Y (3)
 #define MAX_ENEMY_SHOTS (2)
-#define ENEMY_SHOT_SPEED (3)
+#define ENEMY_SHOT_SPEED (2)
 
 #define MAX_LEVELS (5)
 #define MAX_ENEMY_TILES (15)
@@ -36,6 +36,10 @@ typedef struct numeric_label {
 	unsigned int value;
 	char dirty;
 } numeric_label;
+
+struct ply_ctl {
+	char death_delay;
+} ply_ctl;
 
 actor player;
 actor shot;
@@ -70,6 +74,7 @@ struct level {
 } level;
 
 numeric_label score;
+numeric_label lives;
 
 const level_info level_infos[MAX_LEVELS] = {
 	{192, 0, 0, 0, 0, 0, 0, LV_ODD_SPACING},
@@ -80,6 +85,7 @@ const level_info level_infos[MAX_LEVELS] = {
 };
 
 void add_score(int delta);
+void add_lives(int delta);
 
 void load_standard_palettes() {
 	SMS_loadBGPalette(sprites_palette_bin);
@@ -107,13 +113,15 @@ void handle_player_input() {
 			shot.y = player.y;
 			shot.active = 1;
 
-			PSGPlayNoRepeat(player_shot_psg);
+			if (!ply_ctl.death_delay) PSGPlayNoRepeat(player_shot_psg);
 		}
 	}
 	
 	if ((joy & PORT_A_KEY_UP) && (joy & PORT_A_KEY_1)&& (joy & PORT_A_KEY_2)) {
 		level.cheat_skip = 1;
 	}
+
+	if (ply_ctl.death_delay) ply_ctl.death_delay--;
 }
 
 void wait_button_release() {
@@ -145,6 +153,42 @@ char is_colliding_with_shot(actor *act) {
 	if (delta < -6 || delta > act->pixel_w + 14) return 0;
 	
 	return 1;
+}
+
+char is_player_colliding_with_enemy(actor *enm) {
+	static int delta;
+	
+	if (!enm->active) return 0;
+	if (!player.active) return 0;
+
+	delta = player.y - enm->y;
+	if (delta < -12 || delta > 12) return 0;	
+
+	delta = player.x - enm->x;
+	if (delta < -12 || delta > 12) return 0;
+	
+	return 1;
+}
+
+char is_player_colliding_with_shot(actor *sht) {
+	static int delta;
+	
+	if (!sht->active) return 0;
+	if (!player.active) return 0;
+
+	delta = player.y - sht->y;
+	if (delta < -6 || delta > 12) return 0;	
+
+	delta = player.x - sht->x;
+	if (delta < -6 || delta > 12) return 0;
+	
+	return 1;
+}
+
+void kill_player() {
+	ply_ctl.death_delay = 120;
+	PSGPlayNoRepeat(player_death_psg);
+	add_lives(-1);
 }
 
 void init_enemies() {
@@ -209,6 +253,10 @@ void handle_enemies_movement() {
 
 					add_score(level.enemy_score);
 					PSGSFXPlay(enemy_death_psg, SFX_CHANNELS2AND3);
+				}
+				
+				if (!ply_ctl.death_delay && is_player_colliding_with_enemy(enemy)) {
+					kill_player();
 				}
 			}
 
@@ -316,8 +364,11 @@ void handle_enemy_shots_movement() {
 		if (enm_shot->active) {
 			enm_shot->y += ENEMY_SHOT_SPEED;
 			if (enm_shot->y > SCREEN_H) enm_shot->active = 0;
+			if (!ply_ctl.death_delay && is_player_colliding_with_shot(enm_shot)) {
+				kill_player();
+			}
 		} else {
-			if (rand() & 0x1F) fire_as_enemy_shot(enm_shot);
+			if (rand() & 0x7FF) fire_as_enemy_shot(enm_shot);
 		}
 	}
 }
@@ -408,7 +459,61 @@ void draw_level_number() {
 	draw_numeric_label(&level.label);
 }
 
-void main() {
+void init_lives() {
+	init_numeric_label(&lives, 20, 1);
+	set_numeric_label(&lives, 3);
+}
+
+void add_lives(int delta) {
+	add_numeric_label(&lives, delta);
+}
+
+void draw_lives() {
+	draw_numeric_label(&lives);
+}
+
+void gameover_sequence() {
+	// Waits for a couple seconts
+	int gameover_delay = 120;
+	while (gameover_delay) {
+		SMS_waitForVBlank();
+
+		draw_score();
+		draw_lives();
+		draw_level_number();
+
+		SMS_setNextTileatXY(11, 11);
+		if (gameover_delay & 0x08) {
+			puts("GAME OVER!!");
+		} else {
+			puts("           ");
+		}
+		
+		gameover_delay--;
+	}
+
+	SMS_setNextTileatXY(11, 11);
+	puts("GAME OVER!!");
+	
+	// Waits for button press
+	unsigned char joy = 0;
+	while (!(joy & (PORT_A_KEY_1 | PORT_A_KEY_2))) {
+		SMS_waitForVBlank();
+		joy = SMS_getKeysStatus();
+	}
+
+	// Waits for button release
+	while (joy & (PORT_A_KEY_1 | PORT_A_KEY_2)) {
+		SMS_waitForVBlank();
+		joy = SMS_getKeysStatus();
+	}
+
+	// Clears the message
+	SMS_setNextTileatXY(11, 11);
+	puts("           ");
+}
+
+void gameplay_loop() {
 	SMS_useFirstHalfTilesforSprites(1);
 	SMS_setSpriteMode(SPRITEMODE_TALL);
 	SMS_VDPturnOnFeature(VDPFEATURE_HIDEFIRSTCOL);
@@ -419,9 +524,11 @@ void main() {
 	load_standard_palettes();
 
 	SMS_setNextTileatXY(1, 1);
-	puts("Score: ");
+	puts("Score:       ");
+	SMS_setNextTileatXY(14, 1);
+	puts("Lives:   ");
 	SMS_setNextTileatXY(22, 1);
-	puts("Level: ");
+	puts("Level:   ");
 
 	SMS_setLineInterruptHandler(&interrupt_handler);
 	SMS_setLineCounter(180);
@@ -431,12 +538,14 @@ void main() {
 	
 	init_actor(&player, 120, PLAYER_BOTTOM, 2, 1, 2, 1);
 	init_actor(&shot, 120, PLAYER_BOTTOM - 8, 1, 1, 6, 1);
+	ply_ctl.death_delay = 0;
 	
 	level.number = 1;
 	init_score();
+	init_lives();
 	init_level();
 
-	while (1) {
+	while (lives.value) {
 		level.enemy_count = count_enemies();
 		if (!level.enemy_count || level.cheat_skip) {
 			if (level.cheat_skip) {
@@ -454,7 +563,7 @@ void main() {
 		
 		SMS_initSprites();
 
-		draw_actor(&player);
+		if (!(ply_ctl.death_delay & 0x04)) draw_actor(&player);
 		draw_actor(&shot);
 		draw_enemies();
 		draw_enemy_shots();
@@ -464,12 +573,20 @@ void main() {
 		SMS_copySpritestoSAT();
 
 		draw_score();
+		draw_lives();
 		draw_level_number();
 	}
 }
 
+void main() {
+	while (1) {
+		gameplay_loop();
+		gameover_sequence();
+	}
+}
+
 SMS_EMBED_SEGA_ROM_HEADER(9999,0); // code 9999 hopefully free, here this means 'homebrew'
-SMS_EMBED_SDSC_HEADER(0,1, 2022,03,13, "Haroldo-OK\\2022", "Food Fighter",
+SMS_EMBED_SDSC_HEADER(0,2, 2022,03,23, "Haroldo-OK\\2022", "Food Fighter",
   "A food-based SHMUP.\n"
   "Made for the SMS Power! Coding Competition 2022 - https://www.smspower.org/forums/18879-Competitions2022DeadlineIs27thMarch\n"
   "Built using devkitSMS & SMSlib - https://github.com/sverx/devkitSMS");
