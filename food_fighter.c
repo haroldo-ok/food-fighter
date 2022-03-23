@@ -472,7 +472,48 @@ void draw_lives() {
 	draw_numeric_label(&lives);
 }
 
-void main() {
+void gameover_sequence() {
+	// Waits for a couple seconts
+	int gameover_delay = 120;
+	while (gameover_delay) {
+		SMS_waitForVBlank();
+
+		draw_score();
+		draw_lives();
+		draw_level_number();
+
+		SMS_setNextTileatXY(11, 11);
+		if (gameover_delay & 0x08) {
+			puts("GAME OVER!!");
+		} else {
+			puts("           ");
+		}
+		
+		gameover_delay--;
+	}
+
+	SMS_setNextTileatXY(11, 11);
+	puts("GAME OVER!!");
+	
+	// Waits for button press
+	unsigned char joy = 0;
+	while (!(joy & (PORT_A_KEY_1 | PORT_A_KEY_2))) {
+		SMS_waitForVBlank();
+		joy = SMS_getKeysStatus();
+	}
+
+	// Waits for button release
+	while (joy & (PORT_A_KEY_1 | PORT_A_KEY_2)) {
+		SMS_waitForVBlank();
+		joy = SMS_getKeysStatus();
+	}
+
+	// Clears the message
+	SMS_setNextTileatXY(11, 11);
+	puts("           ");
+}
+
+void gameplay_loop() {
 	SMS_useFirstHalfTilesforSprites(1);
 	SMS_setSpriteMode(SPRITEMODE_TALL);
 	SMS_VDPturnOnFeature(VDPFEATURE_HIDEFIRSTCOL);
@@ -483,11 +524,11 @@ void main() {
 	load_standard_palettes();
 
 	SMS_setNextTileatXY(1, 1);
-	puts("Score: ");
+	puts("Score:       ");
 	SMS_setNextTileatXY(14, 1);
-	puts("Lives: ");
+	puts("Lives:   ");
 	SMS_setNextTileatXY(22, 1);
-	puts("Level: ");
+	puts("Level:   ");
 
 	SMS_setLineInterruptHandler(&interrupt_handler);
 	SMS_setLineCounter(180);
@@ -504,7 +545,7 @@ void main() {
 	init_lives();
 	init_level();
 
-	while (1) {
+	while (lives.value) {
 		level.enemy_count = count_enemies();
 		if (!level.enemy_count || level.cheat_skip) {
 			if (level.cheat_skip) {
@@ -534,6 +575,13 @@ void main() {
 		draw_score();
 		draw_lives();
 		draw_level_number();
+	}
+}
+
+void main() {
+	while (1) {
+		gameplay_loop();
+		gameover_sequence();
 	}
 }
 
