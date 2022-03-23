@@ -3,12 +3,15 @@ OBJS := data.rel actor.rel food_fighter.rel
 
 all: $(PRJNAME).sms
 
-data.c: data/* data/sprites_tiles.psgcompr data/font.1bpp
+data.c: data/* data/sprites_tiles.psgcompr data/font.1bpp data/player_death.psg
 	folder2c data data
 	
 data/sprites_tiles.psgcompr: data/img/sprites.png
 	BMP2Tile.exe data/img/sprites.png -noremovedupes -8x16 -palsms -fullpalette -savetiles data/sprites_tiles.psgcompr -savepalette data/sprites_palette.bin
 	
+data/player_death.psg: data/deflemask/player_death.vgm
+	vgm2psg data/deflemask/player_death.vgm data/player_death.psg
+
 %.vgm: %.wav
 	psgtalk -r 512 -u 1 -m vgm $<
 

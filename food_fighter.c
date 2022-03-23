@@ -111,7 +111,7 @@ void handle_player_input() {
 			shot.y = player.y;
 			shot.active = 1;
 
-			PSGPlayNoRepeat(player_shot_psg);
+			if (!ply_ctl.death_delay) PSGPlayNoRepeat(player_shot_psg);
 		}
 	}
 	
@@ -185,6 +185,7 @@ char is_player_colliding_with_shot(actor *sht) {
 
 void kill_player() {
 	ply_ctl.death_delay = 120;
+	PSGPlayNoRepeat(player_death_psg);
 }
 
 void init_enemies() {
