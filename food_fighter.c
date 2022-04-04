@@ -177,10 +177,10 @@ char is_player_colliding_with_shot(actor *sht) {
 	if (!player.active) return 0;
 
 	delta = player.y - sht->y;
-	if (delta < -6 || delta > 12) return 0;	
+	if (delta < -12 || delta > 4) return 0;	
 
 	delta = player.x - sht->x;
-	if (delta < -6 || delta > 12) return 0;
+	if (delta < -12 || delta > 4) return 0;
 	
 	return 1;
 }
