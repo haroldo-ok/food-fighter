@@ -147,10 +147,10 @@ char is_colliding_with_shot(actor *act) {
 	if (!act->active) return 0;
 
 	delta = act->y - shot.y;
-	if (delta < -6 || delta > act->pixel_h + 14) return 0;	
+	if (delta < -8 || delta > 16) return 0;	
 
 	delta = act->x - shot.x;
-	if (delta < -6 || delta > act->pixel_w + 14) return 0;
+	if (delta < -10 || delta > 16) return 0;
 	
 	return 1;
 }
@@ -162,10 +162,10 @@ char is_player_colliding_with_enemy(actor *enm) {
 	if (!player.active) return 0;
 
 	delta = player.y - enm->y;
-	if (delta < -12 || delta > 12) return 0;	
+	if (delta < -11 || delta > 11) return 0;	
 
 	delta = player.x - enm->x;
-	if (delta < -12 || delta > 12) return 0;
+	if (delta < -11 || delta > 11) return 0;
 	
 	return 1;
 }
@@ -177,10 +177,10 @@ char is_player_colliding_with_shot(actor *sht) {
 	if (!player.active) return 0;
 
 	delta = player.y - sht->y;
-	if (delta < -6 || delta > 12) return 0;	
+	if (delta < -12 || delta > 4) return 0;	
 
 	delta = player.x - sht->x;
-	if (delta < -6 || delta > 12) return 0;
+	if (delta < -12 || delta > 4) return 0;
 	
 	return 1;
 }
@@ -592,7 +592,7 @@ void main() {
 }
 
 SMS_EMBED_SEGA_ROM_HEADER(9999,0); // code 9999 hopefully free, here this means 'homebrew'
-SMS_EMBED_SDSC_HEADER(0,3, 2022,04,04, "Haroldo-OK\\2022", "Food Fighter",
+SMS_EMBED_SDSC_HEADER(0,4, 2022,04,04, "Haroldo-OK\\2022", "Food Fighter",
   "A food-based SHMUP.\n"
   "Made for the SMS Power! Coding Competition 2022 - https://www.smspower.org/forums/18879-Competitions2022DeadlineIs27thMarch\n"
   "Built using devkitSMS & SMSlib - https://github.com/sverx/devkitSMS");
