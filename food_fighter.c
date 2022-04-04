@@ -513,12 +513,18 @@ void gameover_sequence() {
 	puts("           ");
 }
 
+void clear_background() {
+	SMS_VRAMmemsetW(XYtoADDR(0, 0), 0, 32 * 28 * 2);
+}
+
 void gameplay_loop() {
 	SMS_useFirstHalfTilesforSprites(1);
 	SMS_setSpriteMode(SPRITEMODE_TALL);
 	SMS_VDPturnOnFeature(VDPFEATURE_HIDEFIRSTCOL);
 
 	SMS_displayOff();
+	clear_background();
+	
 	SMS_loadPSGaidencompressedTiles(sprites_tiles_psgcompr, 0);
 	configure_text();
 	load_standard_palettes();
@@ -586,7 +592,7 @@ void main() {
 }
 
 SMS_EMBED_SEGA_ROM_HEADER(9999,0); // code 9999 hopefully free, here this means 'homebrew'
-SMS_EMBED_SDSC_HEADER(0,2, 2022,03,23, "Haroldo-OK\\2022", "Food Fighter",
+SMS_EMBED_SDSC_HEADER(0,3, 2022,04,04, "Haroldo-OK\\2022", "Food Fighter",
   "A food-based SHMUP.\n"
   "Made for the SMS Power! Coding Competition 2022 - https://www.smspower.org/forums/18879-Competitions2022DeadlineIs27thMarch\n"
   "Built using devkitSMS & SMSlib - https://github.com/sverx/devkitSMS");
