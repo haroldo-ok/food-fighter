@@ -162,10 +162,10 @@ char is_player_colliding_with_enemy(actor *enm) {
 	if (!player.active) return 0;
 
 	delta = player.y - enm->y;
-	if (delta < -12 || delta > 12) return 0;	
+	if (delta < -11 || delta > 11) return 0;	
 
 	delta = player.x - enm->x;
-	if (delta < -12 || delta > 12) return 0;
+	if (delta < -11 || delta > 11) return 0;
 	
 	return 1;
 }
@@ -314,6 +314,9 @@ char count_enemies() {
 void fire_as_enemy_shot(actor *enm_shot) {
 	static char i, j, count, target;
 	static actor *enemy;
+	
+	// TODO: Test
+	return;
 	
 	if (!level.enemy_count) return;
 
