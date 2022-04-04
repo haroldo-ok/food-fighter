@@ -513,12 +513,18 @@ void gameover_sequence() {
 	puts("           ");
 }
 
+void clear_background() {
+	SMS_VRAMmemsetW(XYtoADDR(0, 0), 0, 32 * 28 * 2);
+}
+
 void gameplay_loop() {
 	SMS_useFirstHalfTilesforSprites(1);
 	SMS_setSpriteMode(SPRITEMODE_TALL);
 	SMS_VDPturnOnFeature(VDPFEATURE_HIDEFIRSTCOL);
 
 	SMS_displayOff();
+	clear_background();
+	
 	SMS_loadPSGaidencompressedTiles(sprites_tiles_psgcompr, 0);
 	configure_text();
 	load_standard_palettes();
